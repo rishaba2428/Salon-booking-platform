@@ -6,6 +6,7 @@ import com.glowup.payload.dto.BookingDTO;
 import com.glowup.payload.dto.UserDTO;
 import com.glowup.payload.response.PaymentLinkResponse;
 import com.razorpay.PaymentLink;
+import com.razorpay.RazorpayException;
 
 public interface PaymentService {
 
@@ -20,9 +21,12 @@ public interface PaymentService {
     PaymentLink createRazorpayPaymentLink(UserDTO user,
                                           Long amount,
                                           Long orderId)throws Exception;
-    String createStripePaymentLink(UserDTO user,
-                                   Long amount,
-                                   Long orderId)throws Exception;
 
+    com.stripe.model.checkout.Session createStripePaymentLink(UserDTO user,
+                                   Long amount,
+                                   Long orderId) throws com.stripe.exception.StripeException;
+
+    Boolean proceedPayment(PaymentOrder paymentOrder, String paymentId,
+                           String paymentLinkId) throws RazorpayException;
 
 }

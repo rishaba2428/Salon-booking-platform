@@ -1,12 +1,14 @@
 package com.glowup.service.impl;
 
 import com.glowup.domain.PaymentMethod;
+import com.glowup.domain.PaymentOrderStatus;
 import com.glowup.model.PaymentOrder;
 import com.glowup.payload.dto.BookingDTO;
 import com.glowup.payload.dto.UserDTO;
 import com.glowup.payload.response.PaymentLinkResponse;
 import com.glowup.repository.PaymentOrderRepository;
 import com.glowup.service.PaymentService;
+import com.razorpay.Payment;
 import com.stripe.param.checkout.SessionCreateParams;
 import com.stripe.model.checkout.Session;
 import com.stripe.exception.StripeException;
@@ -35,7 +37,7 @@ public class PaymentServiceImpl implements PaymentService {
     private String razorpayApiSecret;
 
     @Override
-    public PaymentLinkResponse createOrder(UserDTO user, BookingDTO booking, PaymentMethod paymentMethod) throws RazorpayException{
+    public PaymentLinkResponse createOrder(UserDTO user, BookingDTO booking, PaymentMethod paymentMethod) throws Exception {
        Long amount =(long)booking.getTotalPrice();
 
         PaymentOrder order = new PaymentOrder();
@@ -43,6 +45,7 @@ public class PaymentServiceImpl implements PaymentService {
         order.setPaymentMethod(paymentMethod);
         order.setBookingId(booking.getId());
         order.setSalonId(booking.getSalonId());
+        order.setUserId(user.getId());
         PaymentOrder savedOrder = paymentOrderRepository.save(order);
 
         PaymentLinkResponse paymentLinkResponse = new PaymentLinkResponse();
@@ -67,10 +70,13 @@ public class PaymentServiceImpl implements PaymentService {
 
         }
         else {
-            String paymentUrl = createStripePaymentLink(user,
+            Session session = createStripePaymentLink(user,
                     savedOrder.getAmount(),
                     savedOrder.getId());
-            paymentLinkResponse.setPayment_link_url(paymentUrl);
+            paymentLinkResponse.setPayment_link_url(session.getUrl());
+            paymentLinkResponse.setGetPayment_link_id(session.getId());
+            savedOrder.setPaymentLinkId(session.getId());
+            paymentOrderRepository.save(savedOrder);
         }
 
         return paymentLinkResponse;
@@ -130,7 +136,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     @Override
-    public String createStripePaymentLink(UserDTO user, Long amount, Long orderId) {
+    public Session createStripePaymentLink(UserDTO user, Long amount, Long orderId) throws StripeException {
 
         Stripe.apiKey = stripeSecretKey;
 
@@ -156,9 +162,60 @@ public class PaymentServiceImpl implements PaymentService {
 
         Session session = Session.create(params);
 
-        return session.getUrl();
+        return session;
 
-    }}
+    }
+
+    @Override
+    public Boolean proceedPayment(PaymentOrder paymentOrder,
+                                  String paymentId,
+                                  String paymentLinkId) throws RazorpayException {
+
+        if(paymentOrder == null) {
+            return false;
+        }
+
+        if(paymentOrder.getStatus().equals(PaymentOrderStatus.PENDING)){
+            if(paymentOrder.getPaymentMethod().equals(PaymentMethod.RAZORPAY)){
+                RazorpayClient razorpay=new RazorpayClient(razorpayApiKey, razorpayApiSecret);
+
+                Payment payment =razorpay.payments.fetch(paymentId);
+                Integer amount=payment.get("amount");
+                String status=payment.get("status");
+
+                if(status.equals("captured")) {
+                    //   produce kafka event
+                    paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
+                    paymentOrderRepository.save(paymentOrder);
+                    return true;
+
+                }
+                return false;
+            }
+            else
+            {
+                try {
+                    Stripe.apiKey = stripeSecretKey;
+                    Session session = Session.retrieve(paymentLinkId);
+                    if("paid".equals(session.getPaymentStatus())) {
+                        paymentOrder.setStatus(PaymentOrderStatus.SUCCESS);
+                        paymentOrderRepository.save(paymentOrder);
+                        return true;
+                    }
+                } catch (StripeException e) {
+                    return false;
+                }
+                return false;
+            }
+        }
+
+        if (paymentOrder.getStatus().equals(PaymentOrderStatus.SUCCESS)) {
+            return true;
+        }
+
+        return false;
+    }
+}
 
 
 

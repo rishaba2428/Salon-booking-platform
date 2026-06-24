@@ -2,6 +2,6 @@ package com.glowup.domain;
 
 public enum PaymentOrderStatus {
     PENDING,
-    SUCCCESS,
+    SUCCESS,
     FAILED
 }
