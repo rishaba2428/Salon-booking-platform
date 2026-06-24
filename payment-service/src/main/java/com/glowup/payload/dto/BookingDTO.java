@@ -1,6 +1,6 @@
 package com.glowup.payload.dto;
 
-import com.glowup.domain.BookingStatus;
+
 import lombok.Data;
 
 import java.time.LocalDateTime;
