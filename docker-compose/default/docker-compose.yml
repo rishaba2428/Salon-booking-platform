@@ -1,0 +1,22 @@
+services:
+  eurekaserver:
+    image: "rishaba2428/salon-eureka-yt:v1"
+    container_name: eurekaserver
+    ports:
+      - "8070:8070"
+    healthcheck:
+      test: [ "CMD-SHELL", "curl --fail --silent localhost:8070/actuator/health/readiness | grep UP || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 700m
+    networks:
+      - glowup
+
+networks:
+  glowup:
+    driver: "bridge"
