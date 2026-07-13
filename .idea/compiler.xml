@@ -12,7 +12,6 @@
         <module name="booking-service" />
         <module name="eureka.server" />
         <module name="gateway-server" />
-        <module name="user-service" />
         <module name="service-offering" />
       </profile>
       <profile name="Annotation profile for salon-service" enabled="true">
@@ -26,6 +25,9 @@
         <module name="salon-service" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="user-service" target="17" />
+    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
