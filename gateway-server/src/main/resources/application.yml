@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: gateway-server
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: "http://localhost:8080/realms/master/protocol/openid-connect/certs"
   cloud:
     gateway:
       discovery:
@@ -39,6 +44,8 @@ spring:
           uri: "lb://USER-SERVICE"
           predicates:
             - Path=/auth/**, /api/admin/users/**, /api/users/**, /users/**
+
+              
 
 eureka:
   instance:
