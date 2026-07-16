@@ -5,6 +5,7 @@ import com.glowup.Payload.dto.SalonDTO;
 import com.glowup.Payload.dto.UserDTO;
 import com.glowup.mapper.SalonMapper;
 import com.glowup.service.SalonService;
+import com.glowup.service.client.UserFeignClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,12 +19,14 @@ import java.util.List;
 public class Saloncontroller {
 
     private final SalonService salonService;
+    private final UserFeignClient userFeignClient;
 
     // http://localhost:5002/api/salons
     @PostMapping
-    public ResponseEntity<SalonDTO> createSalon(@RequestBody SalonDTO salonDTO) {
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(1L);
+    public ResponseEntity<SalonDTO> createSalon(@RequestBody SalonDTO salonDTO,@RequestHeader("Authorization") String jwt) throws Exception {
+
+        UserDTO userDTO = userFeignClient.getUserProfile(jwt).getBody();
+
         Salon salon = salonService.createSalon(salonDTO, userDTO);
         SalonDTO salonDTO1 = SalonMapper.mapToDTO(salon);
         return ResponseEntity.ok(salonDTO1);
@@ -33,9 +36,9 @@ public class Saloncontroller {
     @PutMapping("/{salonId}")
     public ResponseEntity<SalonDTO> updateSalon(
             @PathVariable Long salonId,
-            @RequestBody SalonDTO salonDTO) throws Exception {
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(1L);
+            @RequestBody SalonDTO salonDTO,
+            @RequestHeader("Authorization") String jwt) throws Exception {
+        UserDTO userDTO = userFeignClient.getUserProfile(jwt).getBody();
 
         System.out.println("------"+ salonId+" email "+ salonDTO.getEmail() );
 
@@ -92,7 +95,7 @@ public class Saloncontroller {
 
     // http://localhost:5002/api/salons/5
     @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<SalonDTO> getSalonByOwnerId(@PathVariable Long salonId) throws Exception {
+    public ResponseEntity<SalonDTO> getSalonByOwnerId(@PathVariable("ownerId") Long ownerId) throws Exception {
         UserDTO userDTO = new UserDTO();
         userDTO.setId(1L);
 
